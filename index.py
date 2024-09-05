@@ -1,6 +1,10 @@
 from fastapi import FastAPI, HTTPException
 import google.generativeai as genai
 from dotenv import load_dotenv
+from geopy.geocoders import GoogleV3
+from pydantic import BaseModel
+import requests
+import json
 import os
 
 # Load environment variables from .env file
@@ -39,27 +43,81 @@ def read_item(item_id: int, q: str = None):
     return {"item_id": item_id, "q": q}
 
 
-@app.post("/maps")
-async def create_map(command: str):
-    try:
-        # Generate content using the model
-        response = model.generate_content(prompting_string + " '" + command + "'")
+# Dummy function to simulate model content generation
+def generate_content(prompt):
+    return {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
+                        {
+                            "text": '{"from": "my current location", "to": "YBlock first floor"}'
+                        }
+                    ],
+                    "role": "model",
+                }
+            }
+        ]
+    }
 
-        # Check if response is a string
-        if isinstance(response, str):
+
+class MapCommand(BaseModel):
+    command: str
+
+
+@app.post("/maps")
+async def create_map(command: MapCommand):
+    try:
+        response = generate_content(command.command)
+
+        if isinstance(response["candidates"][0]["content"]["parts"][0]["text"], str):
             import json
 
             try:
-                # Attempt to parse response as JSON
-                response_dict = json.loads(response)
-                return response_dict
+                extracted_data = json.loads(
+                    response["candidates"][0]["content"]["parts"][0]["text"]
+                )
+
+                geolocator = GoogleV3(api_key="YOUR_GOOGLE_MAPS_API_KEY")
+                current_location_coords = {
+                    "lat": 12.9715987,
+                    "lon": 77.594566,
+                }  # Example coordinates
+                destination = extracted_data["to"]
+                destination_location = geolocator.geocode(destination)
+
+                if not destination_location:
+                    raise HTTPException(
+                        status_code=404, detail="Destination not found."
+                    )
+
+                api_key = "AIzaSyDbrZgv56l76sSmJPzO8wTweIMXRuEPszQ"
+                origin = (
+                    f'{current_location_coords["lat"]},{current_location_coords["lon"]}'
+                )
+                destination_coords = (
+                    f"{destination_location.latitude},{destination_location.longitude}"
+                )
+                route_request_url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination_coords}&key={api_key}"
+
+                route_response = requests.get(route_request_url)
+                route_data = route_response.json()
+
+                if "routes" in route_data and len(route_data["routes"]) > 0:
+                    steps = route_data["routes"][0]["legs"][0]["steps"]
+                    directions = [step["html_instructions"] for step in steps]
+
+                    return {
+                        "from": extracted_data["from"],
+                        "to": extracted_data["to"],
+                        "directions": directions,
+                    }
+                else:
+                    raise HTTPException(status_code=404, detail="No route found.")
+
             except json.JSONDecodeError:
                 raise ValueError("Response is not valid JSON.")
-        elif isinstance(response, dict):
-            # If response is already a dictionary, return it
-            return response
         else:
             raise ValueError("Unexpected response format.")
     except Exception as e:
-        # Handle any exceptions and return an HTTP error response
         raise HTTPException(status_code=500, detail=str(e))
