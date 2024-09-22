@@ -1,36 +1,263 @@
+from bson import ObjectId
+import tensorflow as tf
+from pydantic import BaseModel, Field
+from typing import Optional
+from pymongo import MongoClient
 from fastapi import FastAPI, HTTPException
 import google.generativeai as genai
 from dotenv import load_dotenv
-from geopy.geocoders import GoogleV3
-from pydantic import BaseModel
 import requests
 import json
 import os
+import typing_extensions as typing
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve API key and configure the generative model
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise ValueError("GEMINI_API_KEY is not set in the environment variables.")
-genai.configure(api_key=api_key)
+# Retrieve Google Maps and Gemini API keys
+google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 
-# Define the prompting string
-prompting_string = (
-    "Extract the from and to location from the following text and return it as JSON"
-)
+if not google_maps_api_key:
+    raise ValueError("GOOGLE_MAPS_API_KEY is not set in the environment variables.")
+if not gemini_api_key:
+    raise ValueError("GEMINI_API_KEY is not set in the environment variables.")
+
+# Configure Google Generative AI (Gemini) API
+genai.configure(api_key=gemini_api_key)
+
+# MongoDB connection
+db_uri = os.getenv("DATABASE_URL")
+client = MongoClient(db_uri)  # Replace with your MongoDB URI
+db = client["mydatabase"]  # Database name
+collection = db["locations"]  # Collection name
 
 # Create a FastAPI instance
 app = FastAPI()
 
-# Define a model for generating content
-model = genai.GenerativeModel(
-    "gemini-1.5-flash",
-    generation_config={
-        "response_mime_type": "application/json",
-    },
-)
+# TensorFlow Text Vectorization setup
+max_tokens = 10
+vectorizer = tf.keras.layers.TextVectorization(max_tokens=max_tokens, output_mode="int")
+
+
+# Define models for location and coordinates
+class Location(BaseModel):
+    department_name: str = Field(..., description="Name of the department")
+    floor: int = Field(..., description="Floor number")
+    block_name: str = Field(..., description="Block name")
+    room_no: int = Field(..., description="Room number")
+
+
+class Coordinates(BaseModel):
+    latitude: float = Field(..., description="Latitude of the location")
+    longitude: float = Field(..., description="Longitude of the location")
+
+
+class LocationModel(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
+    name: str = Field(..., description="Name of the location")
+    location: Location = Field(
+        ...,
+        description="Details about the location including department, floor, block, and room number",
+    )
+    coordinates: Coordinates = Field(
+        ..., description="Location's geographic coordinates"
+    )
+    vectorized_name: list[int] = Field(
+        ..., description="Vectorized representation of the location name"
+    )
+
+
+class Output(typing.TypedDict):
+    from_location: str
+    to_location: str
+
+
+class MapCommand(BaseModel):
+    command: str
+
+
+# Utility function to extract geocode data using Google Maps API
+def get_geocode_data(location_name: str):
+    base_url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {"address": location_name, "key": google_maps_api_key}
+
+    response = requests.get(base_url, params=params)
+    data = response.json()
+
+    if data["status"] == "OK":
+        lat_lng = data["results"][0]["geometry"]["location"]
+        return {"latitude": lat_lng["lat"], "longitude": lat_lng["lng"]}
+    else:
+        raise ValueError(f"Geocoding failed: {data['status']}")
+
+
+# Function to extract 'from' and 'to' locations using Google Generative AI (Gemini)
+def extract_from_to_locations(input_text: str):
+    prompt = f"Extract the 'from' and 'to' locations from the following text: '{input_text}' if it has some similar text like mentioning my location return it as my location and return it as JSON."
+
+    model = genai.GenerativeModel(
+        "gemini-1.5-pro-latest",
+        system_instruction="Extract the 'from' and 'to' locations from the following text and return it as JSON.",
+    )
+
+    response = model.generate_content(
+        prompt,
+        generation_config=genai.GenerationConfig(
+            response_mime_type="application/json",
+            response_schema=Output,
+        ),
+    )
+
+    try:
+        if response.text:
+            data = json.loads(response.text)
+            print(
+                f"Extracted data: {data.get('from_location')} and {data.get('to_location')}"
+            )
+            return data
+        else:
+            raise ValueError("Gemini API did not return valid data.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error with Gemini API: {str(e)}")
+
+
+from bson import ObjectId
+
+
+@app.post("/maps")
+async def create_map(command: MapCommand):
+    try:
+        # Extract 'from' and 'to' locations using Gemini API
+        extracted_locations = extract_from_to_locations(command.command)
+        from_location = extracted_locations["from_location"]
+        to_location = extracted_locations["to_location"]
+
+        # Determine current location coordinates
+        if "my current location" in from_location.lower():
+            current_location_coords = {
+                "latitude": 11.032603,  # Example latitude
+                "longitude": 77.034561,  # Example longitude
+            }
+        else:
+            current_location_coords = get_geocode_data(from_location)
+
+        # Vectorize the 'to' location
+        vectorizer.adapt([to_location])
+        vectorized_to_location = vectorizer([to_location])
+        vectorized_to_location_array = vectorized_to_location.numpy().tolist()[0]
+
+        # Perform KNN search using MongoDB aggregation
+        location_entry = None
+
+        pipeline = [
+            {
+                "$project": {
+                    "location": "$location",
+                    "location_coordinates": "$location_coordinates",
+                    "vectorized_name": "$vectorized_name",
+                    "distance": {
+                        "$sqrt": {
+                            "$add": [
+                                {
+                                    "$pow": [
+                                        {
+                                            "$subtract": [
+                                                {
+                                                    "$arrayElemAt": [
+                                                        "$vectorized_name",
+                                                        0,
+                                                    ]
+                                                },
+                                                vectorized_to_location_array[0],
+                                            ]
+                                        },
+                                        2,
+                                    ]
+                                },
+                                {
+                                    "$pow": [
+                                        {
+                                            "$subtract": [
+                                                {
+                                                    "$arrayElemAt": [
+                                                        "$vectorized_name",
+                                                        1,
+                                                    ]
+                                                },
+                                                vectorized_to_location_array[1],
+                                            ]
+                                        },
+                                        2,
+                                    ]
+                                },
+                            ]
+                        }
+                    },
+                }
+            },
+            {"$sort": {"distance": 1}},
+            {"$limit": 1},
+        ]
+
+        result = list(collection.aggregate(pipeline))
+
+        if result:
+            location_entry = result[0]
+            coordinates = location_entry["location_coordinates"]
+            # Convert ObjectId to string
+            location_entry["_id"] = str(location_entry["_id"])
+            return {
+                "from": current_location_coords,
+                "to": to_location,
+                "coordinates": coordinates,
+                "location_data": location_entry,
+            }
+        else:
+            # If no entry was found, proceed to geocode the 'to' location
+            geocode_data = {"latitude": 0.0, "longitude": 0.0}
+            # Prepare data for insertion
+            location_data = {
+                "name": to_location,
+                "location": {
+                    "department_name": to_location,
+                    "floor": None,
+                    "block_name": None,
+                    "room_no": None,
+                },
+                "location_coordinates": {
+                    "latitude": geocode_data["latitude"],
+                    "longitude": geocode_data["longitude"],
+                },
+                "vectorized_name": vectorized_to_location_array,
+            }
+
+            result = collection.insert_one(location_data)
+
+            return {
+                "from": current_location_coords,
+                "to": to_location,
+                "coordinates": geocode_data,
+                "inserted_id": str(result.inserted_id),  # Convert ObjectId to string
+                "vectorized_location": vectorized_to_location_array,
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# New endpoint to extract entities from text input
+@app.post("/extract_entities")
+async def extract_entities(command: MapCommand):
+    try:
+        extracted_locations = extract_from_to_locations(command.command)
+        return {
+            "from": extracted_locations["from_location"],
+            "to": extracted_locations["to_location"],
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/")
@@ -38,86 +265,6 @@ def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "q": q}
-
-
-# Dummy function to simulate model content generation
-def generate_content(prompt):
-    return {
-        "candidates": [
-            {
-                "content": {
-                    "parts": [
-                        {
-                            "text": '{"from": "my current location", "to": "YBlock first floor"}'
-                        }
-                    ],
-                    "role": "model",
-                }
-            }
-        ]
-    }
-
-
-class MapCommand(BaseModel):
-    command: str
-
-
-@app.post("/maps")
-async def create_map(command: MapCommand):
-    try:
-        response = generate_content(command.command)
-
-        if isinstance(response["candidates"][0]["content"]["parts"][0]["text"], str):
-            import json
-
-            try:
-                extracted_data = json.loads(
-                    response["candidates"][0]["content"]["parts"][0]["text"]
-                )
-
-                geolocator = GoogleV3(api_key="YOUR_GOOGLE_MAPS_API_KEY")
-                current_location_coords = {
-                    "lat": 12.9715987,
-                    "lon": 77.594566,
-                }  # Example coordinates
-                destination = extracted_data["to"]
-                destination_location = geolocator.geocode(destination)
-
-                if not destination_location:
-                    raise HTTPException(
-                        status_code=404, detail="Destination not found."
-                    )
-
-                api_key = "AIzaSyDbrZgv56l76sSmJPzO8wTweIMXRuEPszQ"
-                origin = (
-                    f'{current_location_coords["lat"]},{current_location_coords["lon"]}'
-                )
-                destination_coords = (
-                    f"{destination_location.latitude},{destination_location.longitude}"
-                )
-                route_request_url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination_coords}&key={api_key}"
-
-                route_response = requests.get(route_request_url)
-                route_data = route_response.json()
-
-                if "routes" in route_data and len(route_data["routes"]) > 0:
-                    steps = route_data["routes"][0]["legs"][0]["steps"]
-                    directions = [step["html_instructions"] for step in steps]
-
-                    return {
-                        "from": extracted_data["from"],
-                        "to": extracted_data["to"],
-                        "directions": directions,
-                    }
-                else:
-                    raise HTTPException(status_code=404, detail="No route found.")
-
-            except json.JSONDecodeError:
-                raise ValueError("Response is not valid JSON.")
-        else:
-            raise ValueError("Unexpected response format.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/retrieve_DB_uri")
+def retrieve_DB_uri():
+    return {"DB_URI": db_uri}
