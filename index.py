@@ -3,7 +3,7 @@ import tensorflow as tf
 from pydantic import BaseModel, Field
 from typing import Optional
 from pymongo import MongoClient
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 import google.generativeai as genai
 from dotenv import load_dotenv
 import requests
@@ -73,6 +73,7 @@ class LocationModel(BaseModel):
 class Output(typing.TypedDict):
     from_location: str
     to_location: str
+
 
 class CurrentLocation(BaseModel):
     latitude: float
@@ -169,13 +170,18 @@ async def create_map(command: MapCommand):
         to_location = extracted_locations["to_location"]
 
         # List of phrases for determining if the user means "my current location"
-        current_location_phrases = ["my current location", "my location", "current location", "here"]
+        current_location_phrases = [
+            "my current location",
+            "my location",
+            "current location",
+            "here",
+        ]
 
         # Determine user's current location if mentioned
         if any(phrase in from_location.lower() for phrase in current_location_phrases):
             current_location_coords = {
                 "latitude": command.currentLocation.latitude,
-                "longitude": command.currentLocation.longitude
+                "longitude": command.currentLocation.longitude,
             }
         else:
             current_location_coords = {
@@ -260,7 +266,6 @@ async def create_map(command: MapCommand):
         print(origin)
         destination = f'{coordinates["latitude"]},{coordinates["longitude"]}'
 
-
         # Construct the Google Maps Directions API URL
         url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&key={google_maps_api_key}"
 
@@ -275,11 +280,17 @@ async def create_map(command: MapCommand):
             directions = []
 
             for step in steps:
-                directions.append({
-                    "instructions": step["html_instructions"],  # HTML instructions (can be displayed as-is)
-                    "distance": step["distance"]["text"],  # Distance for each step
-                    "duration": step["duration"]["text"],  # Time duration for each step
-                })
+                directions.append(
+                    {
+                        "instructions": step[
+                            "html_instructions"
+                        ],  # HTML instructions (can be displayed as-is)
+                        "distance": step["distance"]["text"],  # Distance for each step
+                        "duration": step["duration"][
+                            "text"
+                        ],  # Time duration for each step
+                    }
+                )
 
             # Return both the MongoDB search results and the Google Maps directions
             return {
@@ -291,12 +302,11 @@ async def create_map(command: MapCommand):
             }
         else:
             # Return an error if no routes are found
-            return {
-                "error": "No routes found between the specified locations."
-            }
+            return {"error": "No routes found between the specified locations."}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # New endpoint to extract entities from text input
 @app.post("/extract_entities")
@@ -320,3 +330,47 @@ def read_root():
 @app.get("/retrieve_DB_uri")
 def retrieve_DB_uri():
     return {"DB_URI": db_uri}
+
+
+# Pydantic model for response
+class Transcription(BaseModel):
+    text: str
+
+
+# Route for transcription
+@app.post("/transcribe", response_model=Transcription)
+async def transcribe_audio(file: UploadFile = File(...)):
+    # Read the uploaded file
+    audio_bytes = await file.read()
+
+    # Prepare the request payload
+    url = f"https://speech.googleapis.com/v1/speech:recognize?key={google_maps_api_key}"
+
+    audio_content = audio_bytes.decode(
+        "ISO-8859-1"
+    )  # Ensure bytes are encoded correctly
+
+    payload = {
+        "config": {
+            "encoding": "LINEAR16",  # Adjust based on your audio format
+            "sampleRateHertz": 16000,
+            "languageCode": "en-US",
+        },
+        "audio": {"content": audio_content},
+    }
+
+    # Send the request to the Google Cloud Speech-to-Text API
+    response = requests.post(url, json=payload)
+
+    # Check for errors
+    if response.status_code != 200:
+        return Transcription(text="Error: " + response.text)
+
+    # Extract the transcription
+    transcription = ""
+    results = response.json().get("results", [])
+    for result in results:
+        transcription += result["alternatives"][0]["transcript"] + " "
+
+    # Return transcription
+    return Transcription(text=transcription.strip())
