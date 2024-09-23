@@ -8,3 +8,4 @@ requests
 google-generativeai
 typing-extensions
 python-multipart
+base64

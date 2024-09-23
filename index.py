@@ -1,3 +1,4 @@
+import base64
 from bson import ObjectId
 import tensorflow as tf
 from pydantic import BaseModel, Field
@@ -337,7 +338,6 @@ class Transcription(BaseModel):
     text: str
 
 
-# Route for transcription
 @app.post("/transcribe", response_model=Transcription)
 async def transcribe_audio(file: UploadFile = File(...)):
     # Read the uploaded file
@@ -346,14 +346,13 @@ async def transcribe_audio(file: UploadFile = File(...)):
     # Prepare the request payload
     url = f"https://speech.googleapis.com/v1/speech:recognize?key={google_maps_api_key}"
 
-    audio_content = audio_bytes.decode(
-        "ISO-8859-1"
-    )  # Ensure bytes are encoded correctly
+    # Encode the audio bytes to Base64
+    audio_content = base64.b64encode(audio_bytes).decode("utf-8")
 
     payload = {
         "config": {
             "encoding": "LINEAR16",  # Adjust based on your audio format
-            "sampleRateHertz": 16000,
+            "sampleRateHertz": 16000,  # Adjust based on your audio's sample rate
             "languageCode": "en-US",
         },
         "audio": {"content": audio_content},
