@@ -163,33 +163,33 @@ async def add_location_with_vectorization(location_data: LocationModel):
 @app.post("/maps")
 async def create_map(command: MapCommand):
     try:
-        # Extract 'from' and 'to' locations using Gemini API
+        # Extract 'from' and 'to' locations using your custom extraction method
         extracted_locations = extract_from_to_locations(command.command)
         from_location = extracted_locations["from_location"]
         to_location = extracted_locations["to_location"]
 
-        # Determine current location coordinates
-        # List of possible phrases indicating the user's current location
+        # List of phrases for determining if the user means "my current location"
         current_location_phrases = ["my current location", "my location", "current location", "here"]
 
-        # Check if any of the current location phrases are in the 'from_location'
+        # Determine user's current location if mentioned
         if any(phrase in from_location.lower() for phrase in current_location_phrases):
-            current_location_coords = command.currentLocation
+            current_location_coords = {
+                "latitude": command.currentLocation.latitude,
+                "longitude": command.currentLocation.longitude
+            }
         else:
             current_location_coords = {
                 "latitude": 0.0,
                 "longitude": 0.0,
             }
 
-
-        # Vectorize the 'to' location
+        # Vectorize the 'to' location (assuming you have a vectorizer setup)
         vectorizer.adapt([to_location])
         vectorized_to_location = vectorizer([to_location])
         vectorized_to_location_array = vectorized_to_location.numpy().tolist()[0]
 
-        # Perform KNN search using MongoDB aggregation
+        # MongoDB KNN search
         location_entry = None
-
         pipeline = [
             {
                 "$project": {
@@ -247,44 +247,56 @@ async def create_map(command: MapCommand):
             coordinates = location_entry.get("coordinates")
             # Convert ObjectId to string
             location_entry["_id"] = str(location_entry["_id"])
+        else:
+            # If no entry found, proceed to geocode or handle the error
+            coordinates = {
+                "latitude": 0.0,
+                "longitude": 0.0,
+            }
+
+        print(current_location_coords)
+        # Use Google Maps Directions API to fetch directions
+        origin = f'{current_location_coords["latitude"]},{current_location_coords["longitude"]}'
+        print(origin)
+        destination = f'{coordinates["latitude"]},{coordinates["longitude"]}'
+
+
+        # Construct the Google Maps Directions API URL
+        url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&key={google_maps_api_key}"
+
+        # Make a request to Google Maps Directions API
+        response = requests.get(url)
+        data = response.json()
+
+        # Check if any routes are available in the API response
+        if "routes" in data and data["routes"]:
+            # Extract the steps for the directions
+            steps = data["routes"][0]["legs"][0]["steps"]
+            directions = []
+
+            for step in steps:
+                directions.append({
+                    "instructions": step["html_instructions"],  # HTML instructions (can be displayed as-is)
+                    "distance": step["distance"]["text"],  # Distance for each step
+                    "duration": step["duration"]["text"],  # Time duration for each step
+                })
+
+            # Return both the MongoDB search results and the Google Maps directions
             return {
                 "from": current_location_coords,
                 "to": to_location,
                 "coordinates": coordinates,
                 "location_data": location_entry,
+                "directions": directions,  # Include the directions in the response
             }
         else:
-            # If no entry was found, proceed to geocode the 'to' location
-            geocode_data = {"latitude": 0.0, "longitude": 0.0}
-            # Prepare data for insertion
-            location_data = {
-                "name": to_location,
-                "location": {
-                    "department_name": to_location,
-                    "floor": None,
-                    "block_name": None,
-                    "room_no": None,
-                },
-                "coordinates": {
-                    "latitude": geocode_data["latitude"],
-                    "longitude": geocode_data["longitude"],
-                },
-                "vectorized_name": vectorized_to_location_array,
-            }
-
-            result = collection.insert_one(location_data)
-
+            # Return an error if no routes are found
             return {
-                "from": current_location_coords,
-                "to": to_location,
-                "coordinates": geocode_data,
-                "inserted_id": str(result.inserted_id),  # Convert ObjectId to string
-                "vectorized_location": vectorized_to_location_array,
+                "error": "No routes found between the specified locations."
             }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # New endpoint to extract entities from text input
 @app.post("/extract_entities")
