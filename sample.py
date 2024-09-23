@@ -42,6 +42,7 @@ import json
 import google.generativeai as genai
 import dotenv
 import os
+import requests
 
 import typing_extensions as typing
 
@@ -81,6 +82,7 @@ def extract_from_to_locations(input_text: str):
         # Clean the response to extract the JSON
         if response.text:
             output = json.loads(response.text)
+            print(f"Extracted data: {output}")
             return output
         else:
             raise ValueError("Gemini API did not return valid data.")
@@ -93,4 +95,19 @@ def extract_from_to_locations(input_text: str):
 
 
 # Test the function
-print(extract_from_to_locations("from New York to Los Angeles"))
+data = extract_from_to_locations(
+    "I am traveling from New York to PSG College of Technology,Coimbatore."
+)
+
+
+def get_geocode_data(location: str):
+    base_url = f"https://nominatim.openstreetmap.org/search?q={location}&format=geojson"
+    response = requests.get(base_url)
+    data = response.json()
+    return data
+
+
+gecodes = get_geocode_data(data.get("to_location"))
+
+# print(data.get("from_location"))
+print(gecodes)

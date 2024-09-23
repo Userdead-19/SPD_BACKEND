@@ -63,8 +63,10 @@ class LocationModel(BaseModel):
     coordinates: Coordinates = Field(
         ..., description="Location's geographic coordinates"
     )
-    vectorized_name: list[int] = Field(
-        ..., description="Vectorized representation of the location name"
+    vectorized_name: Optional[list[int]] = Field(
+        None,
+        description="Vectorized representation of the location name",
+        exclude=True,  # Exclude from validation when receiving data
     )
 
 
@@ -125,6 +127,34 @@ def extract_from_to_locations(input_text: str):
 from bson import ObjectId
 
 
+@app.post("/add_location_with_vectorization")
+async def add_location_with_vectorization(location_data: LocationModel):
+    try:
+        print(location_data)
+        # Vectorize the location name
+        vectorizer.adapt([location_data.name])
+        vectorized_name = vectorizer([location_data.name])
+        vectorized_name_array = vectorized_name.numpy().tolist()[
+            0
+        ]  # Convert to list of ints
+
+        # Update the location_data with the vectorized name
+        location_dict = location_data.dict(by_alias=True)
+        location_dict["vectorized_name"] = vectorized_name_array
+
+        # Insert data into the MongoDB collection
+        result = collection.insert_one(location_dict)
+
+        # Return the inserted document ID and vectorized name
+        return {
+            "inserted_id": str(result.inserted_id),
+            "vectorized_name": vectorized_name_array,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/maps")
 async def create_map(command: MapCommand):
     try:
@@ -154,7 +184,7 @@ async def create_map(command: MapCommand):
             {
                 "$project": {
                     "location": "$location",
-                    "location_coordinates": "$location_coordinates",
+                    "coordinates": "$coordinates",
                     "vectorized_name": "$vectorized_name",
                     "distance": {
                         "$sqrt": {
@@ -204,7 +234,7 @@ async def create_map(command: MapCommand):
 
         if result:
             location_entry = result[0]
-            coordinates = location_entry["location_coordinates"]
+            coordinates = location_entry.get("coordinates")
             # Convert ObjectId to string
             location_entry["_id"] = str(location_entry["_id"])
             return {
@@ -225,7 +255,7 @@ async def create_map(command: MapCommand):
                     "block_name": None,
                     "room_no": None,
                 },
-                "location_coordinates": {
+                "coordinates": {
                     "latitude": geocode_data["latitude"],
                     "longitude": geocode_data["longitude"],
                 },
