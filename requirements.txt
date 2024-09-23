@@ -7,3 +7,4 @@ python-dotenv
 requests
 google-generativeai
 typing-extensions
+python-multipart
