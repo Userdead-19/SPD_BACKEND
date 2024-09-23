@@ -347,6 +347,8 @@ async def transcribe_audio(file: UploadFile = File(...)):
     url = f"https://speech.googleapis.com/v1/speech:recognize?key={google_maps_api_key}"
 
     # Encode the audio bytes to Base64
+    print(audio_bytes)
+
     audio_content = base64.b64encode(audio_bytes).decode("utf-8")
 
     payload = {
@@ -357,7 +359,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
         },
         "audio": {"content": audio_content},
     }
-
+    print(payload)
     # Send the request to the Google Cloud Speech-to-Text API
     response = requests.post(url, json=payload)
 
