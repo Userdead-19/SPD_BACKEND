@@ -1,11 +1,17 @@
-FROM python:3.10
+# Use the official Python image as a base
+FROM python:3.9-slim
 
-WORKDIR /App
-    
+# Set the working directory
+WORKDIR /app
+
+# Copy the requirements file
 COPY requirements.txt .
 
-RUN pip install -r requirements.txt
+# Install the dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the application code
 COPY . .
 
-CMD ["fastapi","dev","index.py"]
+# Command to run the FastAPI application with Uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
