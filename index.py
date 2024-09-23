@@ -74,9 +74,14 @@ class Output(typing.TypedDict):
     from_location: str
     to_location: str
 
+class CurrentLocation(BaseModel):
+    latitude: float
+    longitude: float
+
 
 class MapCommand(BaseModel):
     command: str
+    currentLocation: CurrentLocation
 
 
 # Utility function to extract geocode data using Google Maps API
@@ -164,13 +169,18 @@ async def create_map(command: MapCommand):
         to_location = extracted_locations["to_location"]
 
         # Determine current location coordinates
-        if "my current location" in from_location.lower():
-            current_location_coords = {
-                "latitude": 11.032603,  # Example latitude
-                "longitude": 77.034561,  # Example longitude
-            }
+        # List of possible phrases indicating the user's current location
+        current_location_phrases = ["my current location", "my location", "current location", "here"]
+
+        # Check if any of the current location phrases are in the 'from_location'
+        if any(phrase in from_location.lower() for phrase in current_location_phrases):
+            current_location_coords = command.currentLocation
         else:
-            current_location_coords = get_geocode_data(from_location)
+            current_location_coords = {
+                "latitude": 0.0,
+                "longitude": 0.0,
+            }
+
 
         # Vectorize the 'to' location
         vectorizer.adapt([to_location])
