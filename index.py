@@ -3,7 +3,7 @@ from bson import ObjectId
 import tensorflow as tf
 from pydantic import BaseModel, Field
 from typing import Optional
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 from fastapi import FastAPI, File, HTTPException, UploadFile
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -138,9 +138,6 @@ def extract_from_to_locations(input_text: str):
             raise ValueError("Gemini API did not return valid data.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error with Gemini API: {str(e)}")
-
-
-from bson import ObjectId
 
 
 @app.post("/add_location_with_vectorization")
