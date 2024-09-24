@@ -1,7 +1,7 @@
 # Use the official Python image as a base
 FROM python:3.9-slim
 
-# Install ffmpeg
+# Install ffmpeg and other required packages
 RUN apt-get update && apt-get install -y ffmpeg && apt-get clean
 
 # Set the working directory
