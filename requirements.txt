@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 google-cloud-speech
-pymongo==4.9.1
+pymongo
 python-dotenv
 google-generativeai
 requests
