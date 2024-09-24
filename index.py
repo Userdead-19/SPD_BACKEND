@@ -11,6 +11,15 @@ import requests
 import json
 import os
 import typing_extensions as typing
+from pydub import AudioSegment
+import io
+from google.oauth2 import service_account
+from google.cloud import speech
+
+# Initialize Google Cloud Speech client
+client_file = "hackfest-436404-948ce3ca39f3.json"
+credentials = service_account.Credentials.from_service_account_file(client_file)
+Client = speech.SpeechClient(credentials=credentials)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -340,38 +349,42 @@ class Transcription(BaseModel):
 
 @app.post("/transcribe", response_model=Transcription)
 async def transcribe_audio(file: UploadFile = File(...)):
-    # Read the uploaded file
-    audio_bytes = await file.read()
+    try:
+        # Read the uploaded audio file
+        audio_bytes = await file.read()
 
-    # Prepare the request payload
-    url = f"https://speech.googleapis.com/v1/speech:recognize?key={google_maps_api_key}"
+        # Save the file locally for conversion
+        stereo_audio_path = "stereo_audio.wav"
+        with open(stereo_audio_path, "wb") as f:
+            f.write(audio_bytes)
 
-    # Encode the audio bytes to Base64
-    print(audio_bytes)
+        # Convert stereo to mono using pydub
+        sound = AudioSegment.from_wav(stereo_audio_path)
+        mono_sound = sound.set_channels(1)
+        mono_audio_path = "mono_audio.wav"
+        mono_sound.export(mono_audio_path, format="wav")
 
-    audio_content = base64.b64encode(audio_bytes).decode("utf-8")
+        # Load the mono audio file and recognize speech
+        with io.open(mono_audio_path, "rb") as audio_file:
+            content = audio_file.read()
+        audio = speech.RecognitionAudio(content=content)
 
-    payload = {
-        "config": {
-            "encoding": "LINEAR16",  # Adjust based on your audio format
-            "sampleRateHertz": 16000,  # Adjust based on your audio's sample rate
-            "languageCode": "en-US",
-        },
-        "audio": {"content": audio_content},
-    }
-    print(payload)
-    # Send the request to the Google Cloud Speech-to-Text API
-    response = requests.post(url, json=payload)
+        # Configure the recognition settings
+        config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+            language_code="en-US",
+        )
 
-    # Check for errors
-    if response.status_code != 200:
-        return Transcription(text="Error: " + response.text)
+        # Call Google Cloud Speech API to recognize speech
+        response = Client.recognize(config=config, audio=audio)
 
-    # Extract the transcription
-    transcription = ""
-    results = response.json().get("results", [])
-    for result in results:
-        transcription += result["alternatives"][0]["transcript"] + " "
+        # Extract the transcription from the response
+        transcription = ""
+        for result in response.results:
+            transcription += result.alternatives[0].transcript + " "
 
-    # Return transcription
-    return Transcription(text=transcription.strip())
+        # Return transcription
+        return Transcription(text=transcription.strip())
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

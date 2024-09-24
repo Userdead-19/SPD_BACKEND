@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "hackfest-436404",
+  "private_key_id": "948ce3ca39f3d09ed2391618e82a1510e9039d55",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDRzvZ0oYaO2OwB\nQ5edZA3hJrj7HKzQF2r8TIk/5kqddZMTp6ML/9BkTn+bClLHJp3YlYXkoIlmz8/m\nB2QXnRTiMgzmtykmcY9QHZIh059MvZuD+OrwCnx6XgAhjb8nmZWTm6Blq/yf03An\nTn6d8RUD25Yu8lAVx1WxzC//48U70+CEtf6e63Z0NzJafm5FCEH1tFIpnmRpouBF\nr6N1ji4FWwxuic6SOwicVde+KVbQTcXrmAQ1HSXPsO2hfWSETcaSxJSuYa/C+ld0\nvh7QmOTuPbWnPYDK9TzPKAr02DJgWqjkuYzUHnx+s1dVT5+DDLmpxwDcr0jNW7Ce\nd24SvR0dAgMBAAECggEAB2wMe+ons6LCdo9iX0b/o39jLwu/16/iypoXVBNcs5IW\n0EZir87IG6qxoojZWzVnUBbtOnFGnkR4h+kRbJegYLNOKyGmBJ4jAiQjQniu1Szz\nKDzROTyluqgPCSDVw+jcloqWDTXp8epHUjY/2tNOEwNDOAkkAoefftkVhml57x8E\nDUK+MYf8OZQBwg6zHZWStlTMgLXIWAY/SN6LDDZLkGxcbiqHg8BTCYsXI3wXNoZF\n4d1pi2GCXOQfSA/uNA2sw/GbLtjWGe4r2tUnLNVWpQCARJ8elzva09uhyuqp3Bj1\nEs8XhyIvAw3tpbb5fuYZ4CvBJjpqmoTWnU4lsonYYQKBgQD4xBkd9zPWaO53znoJ\nCW+bzVY74PChmAfPKbXZByPhgz1SKdI25irgdghMlUM3VyN95D9GFjdxBv5G60Qp\na2DZzmmhglIfHgZ5wzXxdOAMf6th8rPaHVHQHkNvaDUvC+rpsXewMwQdZsSPvjy4\n3b7FmDWFC7ZU3ZGoO0lmQDKkWwKBgQDX6NnNR3RiNl3qG/ShW9n8S+7St2CdbfDU\nbl5qXrg8ko4WCUsEhCcU3NY2sMH118lUu+WHQ6lbNd9rPaR8joPj7mgewqxCEoxn\nNho9vwtSQULFn8ICM0lyYFLCDDupXPWJQJPvBcttLdMkHj+vwiWWF6kDGyKOVZ1i\nyMV2Ku2d5wKBgD2IrDnYUw8/R3WFMnSXy+67HRCUtJEUPSJGTAASHxMCVqHDTIdd\n6c86AxWGemju+g2C7w/UIQSpWS6LtYGVWRCnWUOlK9EcqTdnTSmb4mvVDLyev1Q9\nmmYjhkTBfx5TEVmbF2MTS3pGWGrCAN0tpKnV2688VW6qnAQEHkTXrm8vAoGAfaoJ\nGnF8S61Y++lJeKD9PtrzJbGVigtzIDEcwsxebuLdz/WYtAg2tu3RwAMg4PW3OJoj\n/ZZj+7JfVwuJsPVBzmf0MfMcT1h8X5Ydr9KBxF43fs59HMq89NUbVdXI48o3Hqt3\nbqbwv5rsSRlR9/oH5lPfCu/ALRengtdYFm7l3gECgYEAh1Tv/BMv4vGegw+xgJ4W\n1Vgf9JgTMtMqZB5TNfVe0xqGUx+c2dFJDVKhdaevmEP7FaWx7Aq57MClm8py5uxD\ndaLa5EGsWucWsC8wQcA8NWGZxzYcP17O0SAroK71A+PUOO3VleRaxfSqGldKPOAe\nXnMY1F2B5rk1Yo7AtVOYaww=\n-----END PRIVATE KEY-----\n",
+  "client_email": "softwarepackagedevelopment@hackfest-436404.iam.gserviceaccount.com",
+  "client_id": "105033605816383294310",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/softwarepackagedevelopment%40hackfest-436404.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
