@@ -7,5 +7,4 @@ google-generativeai
 requests
 pydub
 tensorflow
-bson
 typing-extensions
