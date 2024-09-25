@@ -57,6 +57,9 @@ class Location(BaseModel):
     floor: int = Field(..., description="Floor number")
     block_name: str = Field(..., description="Block name")
     room_no: int = Field(..., description="Room number")
+    landmark: Optional[str] = Field(
+        None, description="Nearby landmark"
+    )  # New field for landmark
 
 
 class Coordinates(BaseModel):
