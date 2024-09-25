@@ -382,8 +382,11 @@ async def transcribe_audio(file: UploadFile = File(...)):
             use_enhanced=True,  # Use enhanced models
             model="default",  # Optionally specify model for use case
             enable_automatic_punctuation=True,  # Add punctuation automatically
-            enable_speaker_diarization=True,  # Separate speakers in transcription
-            diarization_speaker_count=1,  # Adjust based on expected number of speakers
+            enable_word_time_offsets=True,  # Get word-level time offsets
+            diarization_config=speech.SpeakerDiarizationConfig(
+                enable_speaker_diarization=True,  # Enable speaker diarization
+                max_speaker_count=2,  # Maximum number of speakers
+            ),
         )
 
         # Call Google Cloud Speech API to recognize speech
