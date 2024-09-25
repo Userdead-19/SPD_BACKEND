@@ -157,10 +157,10 @@
 import requests
 
 # Replace this with the actual URL of your FastAPI server
-url = "https://spd-backend-jdg9.onrender.com/transcribe"  # Change the URL if needed
+url = "http://localhost:8000/transcribe"  # Change the URL if needed
 
 # Path to your audio file
-audio_file_path = "D:\\Exploration\\SPD_BACKEND\\Trailer.wav"
+audio_file_path = "D:\\Exploration\\SPD_BACKEND\\sample_960x400_ocean_with_audio.3gp"
 
 # Open the audio file in binary mode
 with open(audio_file_path, "rb") as audio_file:

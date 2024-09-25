@@ -356,9 +356,9 @@ async def transcribe_audio(file: UploadFile = File(...)):
         with open(input_audio_path, "wb") as f:
             f.write(audio_bytes)
 
-        # Convert .3gp to .wav using FFmpeg
+        # Convert .3gp to .wav using FFmpeg, with -y to overwrite without prompt
         output_audio_path = "stereo_audio.wav"
-        command = ["ffmpeg", "-i", input_audio_path, output_audio_path]
+        command = ["ffmpeg", "-y", "-i", input_audio_path, output_audio_path]
         subprocess.run(command, check=True)  # Ensure ffmpeg is installed and available
 
         # Convert stereo to mono using pydub
