@@ -1,41 +1,18 @@
-# Stage 1: Build Stage
-FROM python:3.9-slim AS builder
+# Use the smaller Python slim image
+FROM python:3.9-slim-buster
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    ffmpeg \
-    libsndfile1 &&
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install only necessary tools
+RUN apt-get update && apt-get install -y ffmpeg && apt-get clean
 
 # Set the working directory
 WORKDIR /app
 
-# Copy the requirements file
+# Copy and install only necessary requirements
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install dependencies only in the builder stage
-RUN pip install --no-cache-dir --upgrade pip &&
-    pip install --no-cache-dir --upgrade -r requirements.txt
-
-# Install OpenAI Whisper
-RUN pip install --no-cache-dir --upgrade openai-whisper
-
-# Stage 2: Final Stage
-FROM python:3.9-slim
-
-# Install runtime dependencies (ffmpeg, etc.)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    libsndfile1 &&
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Copy installed Python packages from builder
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-
-# Copy the rest of the application code
-WORKDIR /app
+# Copy the rest of the application
 COPY . .
 
-# Command to run the FastAPI application with Uvicorn
-CMD ["uvicorn", "index:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start FastAPI with one worker to save memory
+CMD ["uvicorn", "index:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
