@@ -9,3 +9,4 @@ pydub
 tensorflow
 typing-extensions
 python-multipart
+openai-whisper
