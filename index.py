@@ -15,6 +15,7 @@ from pydub import AudioSegment
 import io
 from google.oauth2 import service_account
 from google.cloud import speech
+import subprocess
 
 # Initialize Google Cloud Speech client
 client_file = "hackfest-436404-948ce3ca39f3.json"
@@ -347,21 +348,26 @@ class Transcription(BaseModel):
 @app.post("/transcribe", response_model=Transcription)
 async def transcribe_audio(file: UploadFile = File(...)):
     try:
-        # Read the uploaded audio file
+        # Read the uploaded audio file (could be .3gp or .wav)
         audio_bytes = await file.read()
 
-        # Save the file locally for conversion
-        stereo_audio_path = "stereo_audio.wav"
-        with open(stereo_audio_path, "wb") as f:
+        # Save the .3gp file locally
+        input_audio_path = "input_audio.3gp"
+        with open(input_audio_path, "wb") as f:
             f.write(audio_bytes)
 
+        # Convert .3gp to .wav using FFmpeg
+        output_audio_path = "stereo_audio.wav"
+        command = ["ffmpeg", "-i", input_audio_path, output_audio_path]
+        subprocess.run(command, check=True)  # Ensure ffmpeg is installed and available
+
         # Convert stereo to mono using pydub
-        sound = AudioSegment.from_wav(stereo_audio_path)
+        sound = AudioSegment.from_wav(output_audio_path)
         mono_sound = sound.set_channels(1)
         mono_audio_path = "mono_audio.wav"
         mono_sound.export(mono_audio_path, format="wav")
 
-        # Load the mono audio file and recognize speech
+        # Load the mono audio file and recognize speech using Google Cloud Speech API
         with io.open(mono_audio_path, "rb") as audio_file:
             content = audio_file.read()
         audio = speech.RecognitionAudio(content=content)
@@ -383,5 +389,9 @@ async def transcribe_audio(file: UploadFile = File(...)):
         # Return transcription
         return Transcription(text=transcription.strip())
 
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(
+            status_code=500, detail="Error converting file with FFmpeg."
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
