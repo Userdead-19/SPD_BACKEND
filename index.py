@@ -375,6 +375,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
         # Configure the recognition settings
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+            language_code="en-US",
         )
 
         # Call Google Cloud Speech API to recognize speech
