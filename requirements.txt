@@ -6,7 +6,7 @@ python-dotenv
 google-generativeai
 requests
 pydub
-tensorflow
+tensorflow-cpu
 typing-extensions
 python-multipart
 openai-whisper

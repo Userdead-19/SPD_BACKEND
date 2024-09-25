@@ -409,7 +409,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-whisper_model = whisper.load_model("base")
+whisper_model = whisper.load_model("tiny")
 
 
 @app.post("/transcribe-whisper", response_model=Transcription)
