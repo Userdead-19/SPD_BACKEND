@@ -157,10 +157,10 @@
 import requests
 
 # Replace this with the actual URL of your FastAPI server
-url = "http://localhost:8000/transcribe"  # Change the URL if needed
+url = "http://localhost:8000/transcribe-whisper"  # Change the URL if needed
 
 # Path to your audio file
-audio_file_path = "D:\\Exploration\\SPD_BACKEND\\sample_960x400_ocean_with_audio.3gp"
+audio_file_path = "D:\\Exploration\\SPD_BACKEND\\output_audio.3gp"
 
 # Open the audio file in binary mode
 with open(audio_file_path, "rb") as audio_file:
@@ -169,8 +169,4 @@ with open(audio_file_path, "rb") as audio_file:
     # Send a POST request with the audio file
     response = requests.post(url, files=files)
 
-# Print the response from the server
-if response.status_code == 200:
-    print("Transcription:", response.json()["text"])
-else:
-    print("Error:", response.text)
+print(response.json())

@@ -1,17 +1,41 @@
+import os
 from gtts import gTTS
-from pydub import AudioSegment
+import subprocess
 
-# Text to be converted into speech
-text = "Hello, I am Abinav"
 
-# Generate speech from text using gTTS
-tts = gTTS(text, lang="en")
+def text_to_speech_3gp(text, output_filename="output.3gp"):
+    try:
+        # Convert text to speech and save as a temporary mp3 file
+        tts = gTTS(text)
+        temp_mp3 = "temp_audio.mp3"
+        tts.save(temp_mp3)
 
-# Save the speech as an mp3 file first (gTTS outputs mp3 by default)
-tts.save("speech.mp3")
+        # Convert mp3 to .3gp using ffmpeg
+        command = [
+            "ffmpeg",
+            "-i",
+            temp_mp3,
+            "-c:a",
+            "aac",
+            "-b:a",
+            "32k",
+            output_filename,
+        ]
+        subprocess.run(command, check=True)
 
-# Convert mp3 to wav using pydub
-audio = AudioSegment.from_mp3("speech.mp3")
-audio.export("speech.wav", format="wav")
+        # Remove the temporary mp3 file
+        os.remove(temp_mp3)
+        print(f"Audio successfully saved as {output_filename}")
 
-print("Generated speech.wav with the text 'Hello, I am Abinav'")
+    except subprocess.CalledProcessError:
+        print("Error during the conversion to .3gp format.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+
+if __name__ == "__main__":
+    # Input text to be converted to voice
+    text = "Hello, this is a test voice message encoded in 3GP format."
+
+    # Call the function to create .3gp file
+    text_to_speech_3gp(text, "output_audio.3gp")
