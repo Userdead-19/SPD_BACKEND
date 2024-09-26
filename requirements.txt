@@ -8,4 +8,4 @@ requests
 pydub
 tensorflow-cpu
 typing-extensions
-python-multiparts
+python-multipart
