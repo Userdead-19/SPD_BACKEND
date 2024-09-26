@@ -8,5 +8,4 @@ requests
 pydub
 tensorflow-cpu
 typing-extensions
-python-multipart
-openai-whisper
+python-multiparts

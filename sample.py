@@ -154,19 +154,28 @@
 # print(response.results[0].alternatives[0].transcript)
 
 
+# import requests
+
+# # Replace this with the actual URL of your FastAPI server
+# url = "http://localhost:8000/transcribe-whisper"  # Change the URL if needed
+
+# # Path to your audio file
+# audio_file_path = "D:\\Exploration\\SPD_BACKEND\\output_audio.3gp"
+
+# # Open the audio file in binary mode
+# with open(audio_file_path, "rb") as audio_file:
+#     files = {"file": audio_file}
+
+#     # Send a POST request with the audio file
+#     response = requests.post(url, files=files)
+
+# print(response.json())
+
+
 import requests
+import time
 
-# Replace this with the actual URL of your FastAPI server
-url = "http://localhost:8000/transcribe-whisper"  # Change the URL if needed
-
-# Path to your audio file
-audio_file_path = "D:\\Exploration\\SPD_BACKEND\\output_audio.3gp"
-
-# Open the audio file in binary mode
-with open(audio_file_path, "rb") as audio_file:
-    files = {"file": audio_file}
-
-    # Send a POST request with the audio file
-    response = requests.post(url, files=files)
-
-print(response.json())
+while True:
+    time.sleep(2)
+    response = requests.get("https://spd-backend-jdg9.onrender.com")
+    print("yes ")

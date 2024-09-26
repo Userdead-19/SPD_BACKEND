@@ -16,7 +16,8 @@ import io
 from google.oauth2 import service_account
 from google.cloud import speech
 import subprocess
-import whisper
+
+# import whisper
 
 # Initialize Google Cloud Speech client
 client_file = "hackfest-436404-948ce3ca39f3.json"
@@ -380,14 +381,6 @@ async def transcribe_audio(file: UploadFile = File(...)):
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
             language_code="en-US",
-            use_enhanced=True,  # Use enhanced models
-            model="default",  # Optionally specify model for use case
-            enable_automatic_punctuation=True,  # Add punctuation automatically
-            enable_word_time_offsets=True,  # Get word-level time offsets
-            diarization_config=speech.SpeakerDiarizationConfig(
-                enable_speaker_diarization=True,  # Enable speaker diarization
-                max_speaker_count=2,  # Maximum number of speakers
-            ),
         )
 
         # Call Google Cloud Speech API to recognize speech
@@ -409,43 +402,43 @@ async def transcribe_audio(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-whisper_model = whisper.load_model("tiny")
+# whisper_model = whisper.load_model("tiny")
 
 
-@app.post("/transcribe-whisper", response_model=Transcription)
-async def transcribe_audio(file: UploadFile = File(...)):
-    try:
-        # Read the uploaded audio file (could be .3gp or .wav)
-        audio_bytes = await file.read()
+# @app.post("/transcribe-whisper", response_model=Transcription)
+# async def transcribe_audio(file: UploadFile = File(...)):
+#     try:
+#         # Read the uploaded audio file (could be .3gp or .wav)
+#         audio_bytes = await file.read()
 
-        # Save the .3gp file locally
-        input_audio_path = "input_audio.3gp"
-        with open(input_audio_path, "wb") as f:
-            f.write(audio_bytes)
+#         # Save the .3gp file locally
+#         input_audio_path = "input_audio.3gp"
+#         with open(input_audio_path, "wb") as f:
+#             f.write(audio_bytes)
 
-        # Convert .3gp to .wav using FFmpeg, with -y to overwrite without prompt
-        output_audio_path = "stereo_audio.wav"
-        command = ["ffmpeg", "-y", "-i", input_audio_path, output_audio_path]
-        subprocess.run(command, check=True)  # Ensure ffmpeg is installed and available
+#         # Convert .3gp to .wav using FFmpeg, with -y to overwrite without prompt
+#         output_audio_path = "stereo_audio.wav"
+#         command = ["ffmpeg", "-y", "-i", input_audio_path, output_audio_path]
+#         subprocess.run(command, check=True)  # Ensure ffmpeg is installed and available
 
-        # Convert stereo to mono using pydub
-        sound = AudioSegment.from_wav(output_audio_path)
-        mono_sound = sound.set_channels(1)
-        mono_audio_path = "mono_audio.wav"
-        mono_sound.export(mono_audio_path, format="wav")
+#         # Convert stereo to mono using pydub
+#         sound = AudioSegment.from_wav(output_audio_path)
+#         mono_sound = sound.set_channels(1)
+#         mono_audio_path = "mono_audio.wav"
+#         mono_sound.export(mono_audio_path, format="wav")
 
-        # Transcribe the audio using Whisper
-        transcription_result = whisper_model.transcribe(mono_audio_path)
+#         # Transcribe the audio using Whisper
+#         transcription_result = whisper_model.transcribe(mono_audio_path)
 
-        # Extract the transcription text from Whisper result
-        transcription_text = transcription_result["text"]
+#         # Extract the transcription text from Whisper result
+#         transcription_text = transcription_result["text"]
 
-        # Return the transcription
-        return Transcription(text=transcription_text.strip())
+#         # Return the transcription
+#         return Transcription(text=transcription_text.strip())
 
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(
-            status_code=500, detail="Error converting file with FFmpeg."
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#     except subprocess.CalledProcessError as e:
+#         raise HTTPException(
+#             status_code=500, detail="Error converting file with FFmpeg."
+#         )
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
