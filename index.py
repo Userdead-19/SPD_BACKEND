@@ -372,15 +372,28 @@ async def transcribe_audio(file: UploadFile = File(...)):
         mono_audio_path = "mono_audio.wav"
         mono_sound.export(mono_audio_path, format="wav")
 
+        # Get the sample rate of the audio
+        sample_rate = sound.frame_rate
+
         # Load the mono audio file and recognize speech using Google Cloud Speech API
         with io.open(mono_audio_path, "rb") as audio_file:
             content = audio_file.read()
         audio = speech.RecognitionAudio(content=content)
 
-        # Configure the recognition settings
+        # Configure the recognition settings with enhanced model and automatic punctuation
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
             language_code="en-US",
+            sample_rate_hertz=sample_rate,  # Set the sample rate dynamically
+            use_enhanced=True,  # Use enhanced model
+            enable_automatic_punctuation=True,  # Enable automatic punctuation
+            model="default",  # Specify a model, such as "video" or "phone_call" if needed
+            speech_contexts=[  # Add relevant phrases for domain-specific optimization
+                speech.SpeechContext(
+                    phrases=["specific jargon", "special terms"],
+                    boost=20.0,  # Boost the probability of these phrases appearing
+                )
+            ],
         )
 
         # Call Google Cloud Speech API to recognize speech
