@@ -1,24 +1,21 @@
-# Use the smaller Python slim image
-FROM python:3.9-slim-buster
+FROM python:3.9-slim
 
-# Install only necessary tools
-RUN apt-get update &&
-    apt-get install -y --no-install-recommends ffmpeg &&
-    apt-get clean &&
-    rm -rf /var/lib/apt/lists/*
+# Install ffmpeg and other required packages
+RUN apt-get update && apt-get install -y ffmpeg && apt-get clean
 
 # Set the working directory
 WORKDIR /app
 
-# Copy and install only necessary requirements
-COPY requirements.txt ./
+# Copy the requirements file
+COPY requirements.txt .
+
+# Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+RUN pip install --upgrade pymongo
+
+# Copy the rest of the application code
 COPY . .
 
-# Optimize TensorFlow for CPU usage (optional)
-ENV TF_CPP_MIN_LOG_LEVEL=2
-
-# Start FastAPI with one worker to save memory
-CMD ["uvicorn", "index:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Command to run the FastAPI application with Uvicorn
+CMD ["uvicorn", "index:app", "--host", "0.0.0.0", "--port", "8000"]
