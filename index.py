@@ -44,6 +44,7 @@ db_uri = os.getenv("DATABASE_URL")
 client = MongoClient(db_uri)  # Replace with your MongoDB URI
 db = client["mydatabase"]  # Database name
 collection = db["locations"]  # Collection name
+users = db["users"]  # Collection for users
 
 # Create a FastAPI instance
 app = FastAPI()
@@ -413,6 +414,25 @@ async def transcribe_audio(file: UploadFile = File(...)):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/login")
+async def login(username: str, password: str):
+    user = users.find_one({"username": username, "password": password})
+    if user:
+        return {"message": "Login successful"}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+
+@app.post("/register")
+async def register(username: str, password: str):
+    user = users.find_one({"username": username})
+    if user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    else:
+        user = users.insert_one({"username": username, "password": password})
+        return {"message": "User registered successfully"}
 
 
 # whisper_model = whisper.load_model("tiny")
