@@ -16,6 +16,9 @@ import io
 from google.oauth2 import service_account
 from google.cloud import speech
 import subprocess
+import jwt
+from datetime import datetime, timedelta
+
 
 # import whisper
 
@@ -35,6 +38,17 @@ if not google_maps_api_key:
     raise ValueError("GOOGLE_MAPS_API_KEY is not set in the environment variables.")
 if not gemini_api_key:
     raise ValueError("GEMINI_API_KEY is not set in the environment variables.")
+# Load environment variables for JWT
+jwt_secret = os.getenv("JWT_SECRET")
+if not jwt_secret:
+    raise ValueError("JWT_SECRET is not set in the environment variables.")
+
+
+def create_jwt_token(data: dict):
+    expiration = datetime.now() + timedelta(hours=1)  # Token expiration (1 hour)
+    token = jwt.encode({"exp": expiration, **data}, jwt_secret, algorithm="HS256")
+    return token
+
 
 # Configure Google Generative AI (Gemini) API
 genai.configure(api_key=gemini_api_key)
@@ -420,7 +434,9 @@ async def transcribe_audio(file: UploadFile = File(...)):
 async def login(username: str, password: str):
     user = users.find_one({"username": username, "password": password})
     if user:
-        return {"message": "Login successful"}
+        # Generate JWT Token
+        token = create_jwt_token({"username": username})
+        return {"message": "Login successful", "token": token}
     else:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
