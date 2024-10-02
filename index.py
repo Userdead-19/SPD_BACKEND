@@ -430,8 +430,16 @@ async def transcribe_audio(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Pydantic model to validate the input
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
 @app.post("/login")
-async def login(username: str, password: str):
+async def login(login_request: LoginRequest):
+    username = login_request.username
+    password = login_request.password
     user = users.find_one({"username": username, "password": password})
     if user:
         # Generate JWT Token
