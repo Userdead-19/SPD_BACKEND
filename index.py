@@ -329,6 +329,7 @@ async def create_map(command: MapCommand):
                 "directions": directions,  # Include the directions in the response
             }
         else:
+            print(data)
             # Return an error if no routes are found
             return {"error": "No routes found between the specified locations."}
 
