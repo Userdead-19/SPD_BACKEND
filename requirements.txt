@@ -9,3 +9,4 @@ pydub
 tensorflow-cpu
 typing-extensions
 python-multipart
+pyjwt
