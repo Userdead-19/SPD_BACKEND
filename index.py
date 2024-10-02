@@ -131,34 +131,64 @@ def get_geocode_data(location_name: str):
         raise ValueError(f"Geocoding failed: {data['status']}")
 
 
-# Function to extract 'from' and 'to' locations using Google Generative AI (Gemini)
+import re
+
+
 def extract_from_to_locations(input_text: str):
-    prompt = f"Extract the 'from' and 'to' locations from the following text: '{input_text}' if it has some similar text like mentioning my location return it as my location and return it as JSON."
+    # Define the API URL
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCcpvCHpUEUagN5OCzkD17wInXFTabpQRQ"
 
-    model = genai.GenerativeModel(
-        "gemini-1.5-pro-latest",
-        system_instruction="Extract the 'from' and 'to' locations from the following text and return it as JSON.",
-    )
+    # Set the headers
+    headers = {"Content-Type": "application/json"}
 
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(
-            response_mime_type="application/json",
-            response_schema=Output,
-        ),
-    )
+    # Define the prompt data
+    data = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f"Extract the 'from' and 'to' locations from the following text: '{input_text}'. If it has some similar text like mentioning 'my location', return it as 'my location' and return it as JSON."
+                    }
+                ]
+            }
+        ]
+    }
 
-    try:
-        if response.text:
-            data = json.loads(response.text)
-            print(
-                f"Extracted data: {data.get('from_location')} and {data.get('to_location')}"
-            )
-            return data
-        else:
-            raise ValueError("Gemini API did not return valid data.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error with Gemini API: {str(e)}")
+    # Send the POST request to the API
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        try:
+            # Extract the data from the response
+            response_json = response.json()
+            content = response_json["candidates"][0]["content"]["parts"][0]["text"]
+
+            # Remove the markdown formatting (backticks and 'json' part)
+            # Use regex to capture the JSON data between backticks
+            json_match = re.search(r"```json\s*(\{.*?\})\s*```", content, re.DOTALL)
+
+            if json_match:
+                # Extract the JSON string
+                json_str = json_match.group(1)
+
+                # Load the JSON data
+                extracted_data = json.loads(json_str)
+
+                # Print and return the extracted data
+                from_location = extracted_data.get("from")
+                to_location = extracted_data.get("to")
+
+                print(f"Extracted data: From - {from_location}, To - {to_location}")
+                return extracted_data
+            else:
+                raise ValueError("No valid JSON data found in the response.")
+
+        except (KeyError, json.JSONDecodeError) as e:
+            raise ValueError("Gemini API did not return valid JSON data.") from e
+    else:
+        # Handle errors
+        raise ValueError(f"Error: {response.status_code}, {response.text}")
 
 
 @app.post("/add_location_with_vectorization")
@@ -194,8 +224,9 @@ async def create_map(command: MapCommand):
     try:
         # Extract 'from' and 'to' locations using your custom extraction method
         extracted_locations = extract_from_to_locations(command.command)
-        from_location = extracted_locations["from_location"]
-        to_location = extracted_locations["to_location"]
+        print(extracted_locations)
+        from_location = extracted_locations["from"]
+        to_location = extracted_locations["to"]
 
         # List of phrases for determining if the user means "my current location"
         current_location_phrases = [

@@ -170,12 +170,68 @@
 #     response = requests.post(url, files=files)
 
 # print(response.json())
-
-
 import requests
-import time
+import json
+import re
 
-while True:
-    time.sleep(2)
-    response = requests.get("https://spd-backend-jdg9.onrender.com")
-    print("yes ")
+
+def extract_from_to_locations(input_text: str):
+    # Define the API URL
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCcpvCHpUEUagN5OCzkD17wInXFTabpQRQ"
+
+    # Set the headers
+    headers = {"Content-Type": "application/json"}
+
+    # Define the prompt data
+    data = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f"Extract the 'from' and 'to' locations from the following text: '{input_text}'. If it has some similar text like mentioning 'my location', return it as 'my location' and return it as JSON."
+                    }
+                ]
+            }
+        ]
+    }
+
+    # Send the POST request to the API
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        try:
+            # Extract the data from the response
+            response_json = response.json()
+            content = response_json["candidates"][0]["content"]["parts"][0]["text"]
+
+            # Remove the markdown formatting (backticks and 'json' part)
+            # Use regex to capture the JSON data between backticks
+            json_match = re.search(r"```json\s*(\{.*?\})\s*```", content, re.DOTALL)
+
+            if json_match:
+                # Extract the JSON string
+                json_str = json_match.group(1)
+
+                # Load the JSON data
+                extracted_data = json.loads(json_str)
+
+                # Print and return the extracted data
+                from_location = extracted_data.get("from")
+                to_location = extracted_data.get("to")
+
+                print(f"Extracted data: From - {from_location}, To - {to_location}")
+                return extracted_data
+            else:
+                raise ValueError("No valid JSON data found in the response.")
+
+        except (KeyError, json.JSONDecodeError) as e:
+            raise ValueError("Gemini API did not return valid JSON data.") from e
+    else:
+        # Handle errors
+        raise ValueError(f"Error: {response.status_code}, {response.text}")
+
+
+# Example usage
+input_text = "I want to travel from my location to Programm Lab, CSE dept"
+extract_from_to_locations(input_text)
