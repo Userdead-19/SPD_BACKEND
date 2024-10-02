@@ -32,7 +32,7 @@ load_dotenv()
 
 # Retrieve Google Maps and Gemini API keys
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-gemini_api_key = os.getenv("GEMINI_API_KEY")
+gemini_api_key = "AIzaSyDtIV_60HVteiogrQRSPDgVlWIRFFaiK3o"
 
 if not google_maps_api_key:
     raise ValueError("GOOGLE_MAPS_API_KEY is not set in the environment variables.")
