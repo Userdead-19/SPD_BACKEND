@@ -482,7 +482,9 @@ async def login(login_request: LoginRequest):
 
 
 @app.post("/register")
-async def register(username: str, password: str):
+async def register(register_request: LoginRequest):
+    username = register_request.username
+    password = register_request.password
     user = users.find_one({"username": username})
     if user:
         raise HTTPException(status_code=400, detail="Username already exists")
