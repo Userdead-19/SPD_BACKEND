@@ -31,8 +31,8 @@ Client = speech.SpeechClient(credentials=credentials)
 load_dotenv()
 
 # Retrieve Google Maps and Gemini API keys
-google_maps_api_key = "AIzaSyCHktZuoiGUqYZPDbuPOeSf_lXE7iC6Z0U"
-gemini_api_key = "AIzaSyD1EKUtw7hGOQPYlG3wMS_e159f1z0Wdlo"
+google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 
 if not google_maps_api_key:
     raise ValueError("GOOGLE_MAPS_API_KEY is not set in the environment variables.")
