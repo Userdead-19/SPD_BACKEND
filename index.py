@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 # import whisper
 
 # Initialize Google Cloud Speech client
-client_file = "hackfest-436404-948ce3ca39f3.json"
+client_file = "handy-amp-439912-d8-2d414952fd07.json"
 credentials = service_account.Credentials.from_service_account_file(client_file)
 Client = speech.SpeechClient(credentials=credentials)
 
@@ -31,8 +31,8 @@ Client = speech.SpeechClient(credentials=credentials)
 load_dotenv()
 
 # Retrieve Google Maps and Gemini API keys
-google_maps_api_key = "AIzaSyDtIV_60HVteiogrQRSPDgVlWIRFFaiK3o"
-gemini_api_key = "AIzaSyDtIV_60HVteiogrQRSPDgVlWIRFFaiK3o"
+google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 
 if not google_maps_api_key:
     raise ValueError("GOOGLE_MAPS_API_KEY is not set in the environment variables.")
@@ -136,7 +136,7 @@ import re
 
 def extract_from_to_locations(input_text: str):
     # Define the API URL
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCcpvCHpUEUagN5OCzkD17wInXFTabpQRQ"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
 
     # Set the headers
     headers = {"Content-Type": "application/json"}
@@ -326,7 +326,7 @@ async def create_map(command: MapCommand):
         destination = f'{coordinates["latitude"]},{coordinates["longitude"]}'
 
         # Construct the Google Maps Directions API URL
-        url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&key=AIzaSyAJ8OfsG7YCONJi3oCFlfxB8OPrs3u8bt8"
+        url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&key={google_maps_api_key}"
 
         # Make a request to Google Maps Directions API
         response = requests.get(url)
