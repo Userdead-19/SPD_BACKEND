@@ -32,7 +32,7 @@ load_dotenv()
 
 # Retrieve Google Maps and Gemini API keys
 google_maps_api_key = "AIzaSyCHktZuoiGUqYZPDbuPOeSf_lXE7iC6Z0U"
-gemini_api_key = "AIzaSyDtIV_60HVteiogrQRSPDgVlWIRFFaiK3o"
+gemini_api_key = "AIzaSyD1EKUtw7hGOQPYlG3wMS_e159f1z0Wdlo"
 
 if not google_maps_api_key:
     raise ValueError("GOOGLE_MAPS_API_KEY is not set in the environment variables.")
