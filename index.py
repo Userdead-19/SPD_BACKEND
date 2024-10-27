@@ -326,7 +326,7 @@ async def create_map(command: MapCommand):
         destination = f'{coordinates["latitude"]},{coordinates["longitude"]}'
 
         # Construct the Google Maps Directions API URL
-        url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&key={google_maps_api_key}"
+        url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&key=AIzaSyAJ8OfsG7YCONJi3oCFlfxB8OPrs3u8bt8"
 
         # Make a request to Google Maps Directions API
         response = requests.get(url)
